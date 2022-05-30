@@ -1,6 +1,22 @@
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+pub enum PkgError {
+    // 业务逻辑的错误
+    #[error("Phone format error")]
+    #[allow(dead_code)]
+    PostgresError,
+
+    #[allow(dead_code)]
+    #[error("Redis create pool error")]
+    RedisCreatePoolError(#[from] deadpool_redis::CreatePoolError),
+
+    #[allow(dead_code)]
+    #[error("Redis pool error")]
+    RedisPoolError2(#[from] deadpool_redis::PoolError),
+}
+
+#[derive(Error, Debug)]
 pub enum OsError {
     // 业务逻辑的错误
     #[error("Phone format error")]
@@ -12,19 +28,21 @@ pub enum OsError {
     #[error("Not sent sim code")]
     #[allow(dead_code)]
     NotSentCode,
+    #[error("Redis connect error")]
+    #[allow(dead_code)]
+    RedisConnectError,
     #[error("{0}")]
     Pkg(PkgError),
-}
+    // #[allow(dead_code)]
+    // #[error(transparent)]
+    // Pkg2(#[from] PkgError),
+    // #[allow(dead_code)]
+    // #[error("Redis create pool error")]
+    // RedisCreatePoolError(#[from] deadpool_redis::CreatePoolError),
 
-#[derive(Error, Debug)]
-pub enum PkgError {
-    // 业务逻辑的错误
-    #[error("Phone format error")]
-    #[allow(dead_code)]
-    PostgresError,
-    #[error("password format error")]
-    #[allow(dead_code)]
-    RedisError,
+    // #[allow(dead_code)]
+    // #[error("Redis pool error")]
+    // RedisPoolError2(#[from] deadpool_redis::PoolError),
 }
 
 impl From<PkgError> for OsError {
@@ -41,6 +59,8 @@ type OsResult<T> = Result<T, OsError>;
 
 #[cfg(test)]
 mod tests {
+
+    use deadpool_redis::{Config, Runtime};
 
     use super::*;
     #[test]
@@ -93,6 +113,15 @@ mod tests {
             return Err(OsError::PhoneFormat);
         }
         if 2 > 5 {
+            return Err(PkgError::PostgresError.into());
+        }
+        if 2 > 5 {
+            let cfg = Config::from_url("url".to_string());
+
+            let pool = cfg
+                .create_pool(Some(Runtime::Tokio1))
+                .map_err(|_| OsError::RedisConnectError)?;
+
             return Err(PkgError::PostgresError.into());
         }
 
